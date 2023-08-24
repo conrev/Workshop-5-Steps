@@ -7,6 +7,7 @@ using UnityEngine;
 public class SwarmManager : MonoBehaviour
 {
     // External parameters/variables
+    [SerializeField] private GameObject enemySlot;
     [SerializeField] private GameObject enemyTemplate;
     [SerializeField] private int enemyRows;
     [SerializeField] private int enemyCols;
@@ -22,11 +23,12 @@ public class SwarmManager : MonoBehaviour
     private void Start()
     {
         // Initialise the swarm by instantiating enemy prefabs.
-        GenerateSwarm();
+        //GenerateSwarm();
 
         // Start moving towards the right (positive x-axis).
-        this._direction = 1; 
-        
+        this._direction = 1;
+
+        StartCoroutine(SwarmHomingSequence());
         // Start swarm at the far left.
         transform.localPosition = new Vector3(this.leftBoundaryX, 0f, 0f);
 
@@ -36,11 +38,11 @@ public class SwarmManager : MonoBehaviour
         // Although it might look like it, using coroutines is *not* the same as
         // using multithreading! Read more here:
         // https://docs.unity3d.com/Manual/Coroutines.html
-        StartCoroutine(StepSwarmPeriodically());
     }
-    
-    private IEnumerator StepSwarmPeriodically() 
+
+    private IEnumerator SwarmHomingSequence()
     {
+        yield return GenerateSwarm();
         // Yep, this is an infinite loop, but the gameplay isn't ever "halted"
         // since the function is invoked as a coroutine. It's also automatically 
         // stopped when the game object is destroyed.
@@ -53,19 +55,29 @@ public class SwarmManager : MonoBehaviour
 
     // Automatically generate swarm of enemies based on the given serialized
     // attributes/parameters.
-    private void GenerateSwarm()
+    private IEnumerator GenerateSwarm()
     {
         // Create swarm of enemies in a grid formation
-        for (var row = 0; row < this.enemyRows; row++)
         for (var col = 0; col < this.enemyCols; col++)
-        {
-            var enemyTransform = Instantiate(this.enemyTemplate).transform;
-            enemyTransform.parent = transform;
-            enemyTransform.localPosition =
-                new Vector3(col, 0.0f, row) * this.enemySpacing;
-        }
-    }
+            for (var row = 0; row < this.enemyRows; row++)
+            {
 
+                var slotPosition = new Vector3(col, 0, row) * this.enemySpacing;
+                var slot = Instantiate(this.enemySlot);
+
+
+                var enemy = Instantiate(this.enemyTemplate);
+
+
+                slot.transform.SetParent(transform);
+                enemy.transform.position = this.transform.position + new Vector3(slotPosition.x, 0, 15.0f);
+                slot.GetComponent<EnemySlot>().SetupSlot(slotPosition, enemy.GetComponent<Rigidbody>());
+
+                yield return new WaitForSeconds(0.03f);
+            }
+
+        yield return new WaitForSeconds(0.5f);
+    }
     // Step the swarm across the screen, based on the current direction, or down
     // and reverse when it reaches the edge.
     private void StepSwarm()
@@ -74,7 +86,7 @@ public class SwarmManager : MonoBehaviour
         var swarmWidth = (this.enemyCols - 1) * this.enemySpacing;
         var swarmMinX = transform.localPosition.x;
         var swarmMaxX = swarmMinX + swarmWidth;
-        
+
         // Check if the swarm has reached a boundary on either side. If so swarm
         // should move down; otherwise, it should move sideways.
         if ((swarmMinX < this.leftBoundaryX && this._direction == -1) ||
