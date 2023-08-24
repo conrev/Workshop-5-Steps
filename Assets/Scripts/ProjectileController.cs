@@ -5,15 +5,21 @@ using UnityEngine;
 
 public class ProjectileController : MonoBehaviour
 {
-    [SerializeField] private Vector3 velocity;
+    [SerializeField] private float projectileSpeed = 10;
     [SerializeField] private ParticleSystem collisionParticles;
 
     [SerializeField] private int damageAmount = 50;
     [SerializeField] private string tagToDamage;
 
+    private Vector3 _projectileDirection;
+
+    public void SetDirection(Vector3 dir)
+    {
+        this._projectileDirection = dir;
+    }
     private void Update()
     {
-        transform.Translate(this.velocity * Time.deltaTime);
+        transform.Translate(this._projectileDirection * this.projectileSpeed * Time.deltaTime);
     }
 
     private void OnTriggerEnter(Collider col)
@@ -24,12 +30,12 @@ public class ProjectileController : MonoBehaviour
             // HealthManager component is attached to the respective object.
             var healthManager = col.gameObject.GetComponent<HealthManager>();
             healthManager.ApplyDamage(this.damageAmount);
-            
+
             // Create collision particles in opposite direction to movement.
             var particles = Instantiate(this.collisionParticles);
             particles.transform.position = transform.position;
             particles.transform.rotation =
-                Quaternion.LookRotation(-this.velocity);
+                Quaternion.LookRotation(-this._projectileDirection);
 
             // Destroy self.
             Destroy(gameObject);
