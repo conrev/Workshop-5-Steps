@@ -16,9 +16,16 @@ public class EnemyController : MonoBehaviour
     private Vector3 _aimDirection;
     private LookRotation _rotationHandler;
 
+    private EnemyStates _state;
+    private enum EnemyStates
+    {
+        Idle,
+        Attack
+    }
 
     void Awake()
     {
+        _state = EnemyStates.Idle;
         _player = FindObjectOfType<PlayerController>().gameObject;
         _rotationHandler = GetComponent<LookRotation>();
         _aimDirection = Vector3.back;
@@ -29,8 +36,14 @@ public class EnemyController : MonoBehaviour
     {
         _rotationHandler.SetRotationTarget(_aimDirection);
 
-        if (_player)
+        if (_state == EnemyStates.Idle)
+        {
+            _aimDirection = Vector3.back;
+        }
+        else if (_state == EnemyStates.Attack && _player)
+        {
             _aimDirection = (_player.transform.position - this.transform.position).normalized;
+        }
 
     }
 
@@ -38,11 +51,28 @@ public class EnemyController : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(Random.Range(minIdleTime, maxIdleTime));
-            Fire();
+            yield return Idle();
+            yield return Attack();
         }
     }
 
+    private IEnumerator Idle()
+    {
+        _state = EnemyStates.Idle;
+        yield return new WaitForSeconds(Random.Range(minIdleTime, maxIdleTime));
+    }
+
+    private IEnumerator Attack()
+    {
+        if (!_player)
+            yield break;
+
+        _state = EnemyStates.Attack;
+        yield return new WaitForSeconds(0.5f);
+        Fire();
+        yield return new WaitForSeconds(0.5f);
+
+    }
     private void Fire()
     {
         var projectile = Instantiate(projectilePrefab);
