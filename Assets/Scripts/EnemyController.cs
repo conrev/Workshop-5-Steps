@@ -1,32 +1,45 @@
 ﻿// COMP30019 - Graphics and Interaction
 // (c) University of Melbourne, 2022
 
+using System.Collections;
+using UnityEditor.MPE;
 using UnityEngine;
 
-[RequireComponent(typeof(MeshRenderer))]
 public class EnemyController : MonoBehaviour
 {
-    [SerializeField] private ParticleSystem deathEffect;
-    
-    private MeshRenderer _renderer;
+    [SerializeField] private float minIdleTime;
 
-    private void Awake()
+    [SerializeField] private float maxIdleTime;
+
+    [SerializeField] private GameObject projectilePrefab;
+    private GameObject _player;
+
+
+    void Awake()
     {
-        this._renderer = gameObject.GetComponent<MeshRenderer>();
+        _player = FindObjectOfType<PlayerController>().gameObject;
+        StartCoroutine(EnemySequence());
     }
 
-    // This method listens to HealthManager "onHealthChanged" events. The actual
-    // event listening is set up within the editor interface. This is purely for
-    // visuals currently, and takes a fractional value between 0 and 1.
-    public void UpdateHealth(float frac)
+    private IEnumerator EnemySequence()
     {
-        this._renderer.material.color = Color.red * frac;
+        while (_player)
+        {
+            yield return new WaitForSeconds(Random.Range(minIdleTime, maxIdleTime));
+            Fire();
+        }
     }
 
-    // Same as above, but listens to onDeath events.
-    public void Kill()
+    private void Fire()
     {
-        var particles = Instantiate(this.deathEffect);
-        particles.transform.position = transform.position;
+        if (!_player)
+            return;
+
+        Vector3 shootingDirection = (_player.transform.position - this.transform.position);
+        shootingDirection.Normalize();
+
+        var projectile = Instantiate(projectilePrefab);
+        projectile.transform.position = this.transform.position;
+        projectile.GetComponent<ProjectileController>().SetDirection(shootingDirection);
     }
 }
