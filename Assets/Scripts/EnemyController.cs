@@ -2,9 +2,9 @@
 // (c) University of Melbourne, 2022
 
 using System.Collections;
-using UnityEditor.MPE;
 using UnityEngine;
 
+[RequireComponent(typeof(LookRotation))]
 public class EnemyController : MonoBehaviour
 {
     [SerializeField] private float minIdleTime;
@@ -13,17 +13,30 @@ public class EnemyController : MonoBehaviour
 
     [SerializeField] private GameObject projectilePrefab;
     private GameObject _player;
+    private Vector3 _aimDirection;
+    private LookRotation _rotationHandler;
 
 
     void Awake()
     {
         _player = FindObjectOfType<PlayerController>().gameObject;
+        _rotationHandler = GetComponent<LookRotation>();
+        _aimDirection = Vector3.back;
         StartCoroutine(EnemySequence());
+    }
+
+    void Update()
+    {
+        _rotationHandler.SetRotationTarget(_aimDirection);
+
+        if (_player)
+            _aimDirection = (_player.transform.position - this.transform.position).normalized;
+
     }
 
     private IEnumerator EnemySequence()
     {
-        while (_player)
+        while (true)
         {
             yield return new WaitForSeconds(Random.Range(minIdleTime, maxIdleTime));
             Fire();
@@ -32,14 +45,8 @@ public class EnemyController : MonoBehaviour
 
     private void Fire()
     {
-        if (!_player)
-            return;
-
-        Vector3 shootingDirection = (_player.transform.position - this.transform.position);
-        shootingDirection.Normalize();
-
         var projectile = Instantiate(projectilePrefab);
         projectile.transform.position = this.transform.position;
-        projectile.GetComponent<ProjectileController>().SetDirection(shootingDirection);
+        projectile.GetComponent<ProjectileController>().SetDirection(_aimDirection);
     }
 }
